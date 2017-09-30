@@ -8,7 +8,7 @@ Created on Sat Sep 30 19:46:24 2017
 #%%
 
 import tensorflow as tf
-import numpy as np
+#import numpy as np
 import os
 
 #%%
@@ -59,10 +59,10 @@ def get_batch(image, label, image_W, image_H, batch_size, capacity):
     image = tf.convert_to_tensor(image, dtype=tf.string)
     label = tf.convert_to_tensor(label, dtype=tf.int32)
     
-    # make an input queue  生成一个队列
-    input_queue = tf.train.slice_input_producer([image, label],shuttle=True)
+    # make an input queue  生成一个队列,shuffle=True即将图片打乱放入队列中
+    input_queue = tf.train.slice_input_producer([image, label],shuffle=True)
     
-    label = input_queue[1]
+    label = input_queue[1] #获取label对应的队列
     image_contents = tf.read_file(input_queue[0])#读取图片
     image = tf.image.decode_jpeg(image_contents, channels=3)#解码jpg格式图片
     
@@ -75,7 +75,7 @@ def get_batch(image, label, image_W, image_H, batch_size, capacity):
     # if you want to test the generated batches of images, you might want to comment the following line.
     # 如果想看到正常的图片，请注释掉111行（标准化）和 126行（image_batch = tf.cast(image_batch, tf.float32)）
     # 训练时不要注释掉！
-	#数据标准化
+    #数据标准化
     image = tf.image.per_image_standardization(image)
     #Creates batches of tensors in tensors.
     image_batch, label_batch = tf.train.batch([image, label],
@@ -89,9 +89,7 @@ def get_batch(image, label, image_W, image_H, batch_size, capacity):
 #                                                      num_threads=64,
 #                                                      capacity=CAPACITY,
 #                                                      min_after_dequeue=CAPACITY-1)
-    #print(label_batch.shape)
-    label_batch = tf.reshape(label_batch, [batch_size])###多此一举？
-    #print(label_batch.shape)
+
     image_batch = tf.cast(image_batch, tf.float32)
     
     return image_batch, label_batch
@@ -102,14 +100,14 @@ def get_batch(image, label, image_W, image_H, batch_size, capacity):
 # To test the generated batches of images
 # When training the model, DO comment the following codes
 
-
-
 '''
+
 import matplotlib.pyplot as plt
 
 BATCH_SIZE = 4
 CAPACITY = 256
-IMG_W = 208
+#图片resize后的大小
+IMG_W = 208 
 IMG_H = 208
 
 #train_dir = '/home/kevin/tensorflow/cats_vs_dogs/data/train/'
@@ -117,26 +115,28 @@ train_dir = 'E:\\data\\Dog_Cat\\train\\'
 image_list, label_list = get_files(train_dir)
 image_batch, label_batch = get_batch(image_list, label_list, IMG_W, IMG_H, BATCH_SIZE, CAPACITY)
 
-with tf.Session() as sess:
+with tf.Session() as sess:#在会话中运行程序
     i = 0
-    coord = tf.train.Coordinator()
+    coord = tf.train.Coordinator()#线程协调者
     threads = tf.train.start_queue_runners(coord=coord)
     
     try:
+        #        Check if stop was requested.
         while not coord.should_stop() and i<1:
             
             img, label = sess.run([image_batch, label_batch])
-            
+            print(img[0,:,:,:])
             # just test one batch
-            for j in range(BATCH_SIZE):#np.arange(BATCH_SIZE):
+            for j in range(BATCH_SIZE):
                 print('label: %d' %label[j])
                 plt.imshow(img[j,:,:,:])
                 plt.show()
             i+=1
             
-    except tf.errors.OutOfRangeError:
+    except tf.errors.OutOfRangeError:#当读取完列队中所有数据时,抛出异常
         print('done!')
     finally:
+        #Request that the threads stop.After this is called, calls to should_stop() will return True.
         coord.request_stop()
     coord.join(threads)
 '''
